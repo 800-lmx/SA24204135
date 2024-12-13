@@ -1,0 +1,228 @@
+---
+title: "Statistical Computing Project"
+author: "SA24204135"
+date: "2024-12-07"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Statistical Computing Project}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## 项目内容：
+### (一)
+
+在这段代码中，我们实现并比较了不同的匹配方法（包括自定义的最近邻匹配、MatchIt 包中的最优匹配和完全匹配），以及它们在倾向性得分匹配中的应用。我们的目标是评估不同匹配方法在控制潜在偏倚（如选择偏倚）方面的表现，并提供性能比较。
+
+## 算法内容包括以下几个方面：
+
+计算倾向性得分（Propensity Score）：
+
+使用逻辑回归模型（glm）根据指定的协变量计算每个样本的倾向性得分，即每个个体接受处理（治疗）的概率。
+该步骤是所有匹配方法的基础，倾向性得分用来衡量一个个体接受治疗的倾向。
+最近邻匹配（Nearest Neighbor Matching）：
+
+自定义的最近邻匹配方法通过倾向性得分来匹配处理组与控制组的个体。
+对于每个处理组样本，找到距离最近的控制组样本进行匹配，匹配的过程中可以指定caliper（最大距离限制），并支持是否允许控制组样本重复使用（replace）。
+使用 MatchIt 包的匹配方法：
+
+MatchIt 提供了多种匹配方法，包括最优匹配（Optimal Matching）和完全匹配（Full Matching）。
+
+最优匹配通过解决一个优化问题来找到最佳的匹配方案，目的是最小化匹配的总距离，确保每个样本都有一个“最佳”配对。
+
+完全匹配则尝试找到所有样本的匹配组合，以确保处理组和控制组之间尽可能平衡。
+标准化均值差异（Standardized Mean Difference, SMD）计算：
+
+为了评估匹配的效果，我们计算了匹配前后处理组和控制组之间每个协变量的标准化均值差异。
+
+SMD 是评估匹配后样本之间协变量平衡的重要指标。SMD 值越小，说明匹配后的平衡越好，处理组与控制组的协变量差异越小。
+匹配时间和标准化均值差异的比较：
+
+对于每种匹配方法，我们记录了匹配所需的时间，并计算匹配前后标准化均值差异。
+最终的结果展示了不同匹配方法的时间消耗以及它们在调整样本平衡方面的效果。这有助于研究人员选择合适的匹配方法，在保证高效性的同时，也能够实现较好的协变量平衡。
+
+```{r}
+library(SA24204135)
+library(Rcpp)
+library(RcppArmadillo)
+library(MatchIt)
+```
+
+### 计算倾向性得分
+
+倾向性得分是通过逻辑回归模型计算的，用来估计每个个体接受治疗的概率。
+```{r}
+compute_propensity_score <- function(data, treatment, covariates) {
+  # 构建公式
+  formula <- as.formula(paste(treatment, "~", paste(covariates, collapse = "+")))
+  # 逻辑回归拟合
+  model <- glm(formula, data = data, family = binomial)
+  # 返回倾向性得分
+  return(predict(model, type = "response"))
+}
+```
+
+### 最近邻匹配（Nearest Neighbor Matching）
+
+```{r}
+nearest_neighbor_matching <- function(data, treatment, covariates, caliper = 0.05, replace = FALSE) {
+  prop_scores <- compute_propensity_score(data, treatment, covariates)
+  
+  treated <- data[data[[treatment]] == 1, ]
+  control <- data[data[[treatment]] == 0, ]
+  
+  matched_control_indices <- numeric(nrow(treated))
+  
+  for (i in 1:nrow(treated)) {
+    dist <- abs(prop_scores[data[[treatment]] == 0] - prop_scores[data[[treatment]] == 1][i])
+    if (!is.null(caliper)) {
+      dist <- dist[dist <= caliper]
+    }
+    if (length(dist) > 0) {
+      matched_control_indices[i] <- which.min(dist)
+    } else {
+      matched_control_indices[i] <- NA
+    }
+    if (!replace) {
+      prop_scores[data[[treatment]] == 0][matched_control_indices[i]] <- NA
+    }
+  }
+  
+  matched_control <- control[matched_control_indices, ]
+  matched_data <- rbind(treated, matched_control)
+  
+  return(matched_data)
+}
+```
+
+### MatchIt 包的完全匹配和最优匹配
+```{r}
+full_matchit_matching <- function(data, treatment, covariates) {
+  formula <- as.formula(paste(treatment, "~", paste(covariates, collapse = "+")))
+  m.out <- matchit(formula, data = data, method = "full", ratio = 1, caliper = 0.05)
+  matched_data <- match.data(m.out)
+  return(matched_data)
+}
+
+optimal_matchit_matching <- function(data, treatment, covariates) {
+  formula <- as.formula(paste(treatment, "~", paste(covariates, collapse = "+")))
+  m.out <- matchit(formula, data = data, method = "optimal", ratio = 1, caliper = 0.05)
+  matched_data <- match.data(m.out)
+  return(matched_data)
+}
+```
+
+### 计算标准化均值差异
+```{r}
+standardized_mean_diff <- function(data, treatment, covariates) {
+  treated <- data[data[[treatment]] == 1, ]
+  control <- data[data[[treatment]] == 0, ]
+  
+  treated_means <- colMeans(treated[, covariates], na.rm = TRUE)
+  control_means <- colMeans(control[, covariates], na.rm = TRUE)
+  
+  treated_sds <- apply(treated[, covariates], 2, sd, na.rm = TRUE)
+  control_sds <- apply(control[, covariates], 2, sd, na.rm = TRUE)
+  
+  standardized_diff <- (treated_means - control_means) / sqrt((treated_sds^2 + control_sds^2) / 2)
+  
+  return(standardized_diff)
+}
+```
+
+
+### 匹配方法比较
+```{r}
+compare_matching <- function(data, treatment, covariates) {
+  # 1. 测试自定义匹配函数
+  start_time <- Sys.time()
+  custom_matched_data <- nearest_neighbor_matching(data, treatment, covariates)
+  custom_time <- Sys.time() - start_time
+  
+  # 2. 测试 Matchit 的 Full Matching
+  start_time <- Sys.time()
+  matchit_full_matched_data <- full_matchit_matching(data, treatment, covariates)
+  matchit_full_time <- Sys.time() - start_time
+  
+  # 3. 测试 Matchit 的 Optimal Matching
+  start_time <- Sys.time()
+  matchit_optimal_matched_data <- optimal_matchit_matching(data, treatment, covariates)
+  matchit_optimal_time <- Sys.time() - start_time
+  
+  # 4. 计算匹配前后的标准化均值差异
+  pre_matching_diff <- standardized_mean_diff(data, treatment, covariates)
+  post_custom_matching_diff <- standardized_mean_diff(custom_matched_data, treatment, covariates)
+  post_matchit_full_matching_diff <- standardized_mean_diff(matchit_full_matched_data, treatment, covariates)
+  post_matchit_optimal_matching_diff <- standardized_mean_diff(matchit_optimal_matched_data, treatment, covariates)
+  
+  # 5. 输出比较结果
+  cat("Custom Matching Time: ", custom_time, "\n")
+  cat("Matchit Full Matching Time: ", matchit_full_time, "\n")
+  cat("Matchit Optimal Matching Time: ", matchit_optimal_time, "\n")
+  
+  cat("\nStandardized Mean Differences (Before Matching):\n")
+  print(pre_matching_diff)
+  
+  cat("\nStandardized Mean Differences (After Custom Matching):\n")
+  print(post_custom_matching_diff)
+  
+  cat("\nStandardized Mean Differences (After Matchit Full Matching):\n")
+  print(post_matchit_full_matching_diff)
+  
+  cat("\nStandardized Mean Differences (After Matchit Optimal Matching):\n")
+  print(post_matchit_optimal_matching_diff)
+}
+```
+
+
+
+### (二)Rcpp函数
+
+1. 矩阵的QR分解（QR Decomposition）
+这个函数将实现一个简单的QR分解，即将一个矩阵A分解为一个正交矩阵Q和一个上三角矩阵R，其中A = Q * R。
+```{r}
+library(SA24204135)
+library(Rcpp)
+
+
+# 创建矩阵 A
+A <- matrix(c(1, 2, 3, 4, 5, 6), nrow = 3, ncol = 2)
+
+# 调用 qr_decomposition 函数
+result <- qr_decomposition(A)
+
+result
+print(result$R)
+```
+
+实现了QR分解，采用了经典的Gram-Schmidt正交化方法。A被分解成Q和R，其中Q是正交矩阵，R是上三角矩阵。返回值是一个包含Q和R的列表。
+
+
+
+2. 使用Monte Carlo方法估算圆周率（π）
+
+这个函数通过Monte Carlo模拟，利用随机点在单位正方形和单位圆中的分布来估算π的值。具体步骤是：在单位正方形中随机生成点，统计落在单位圆内的点的比例，乘以4即得到π的估计值。
+```{r}
+
+monte_carlo_pi(1000000)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

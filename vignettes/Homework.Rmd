@@ -1,0 +1,1020 @@
+---
+title: "Introduction to SA24204135"
+author: "Muxin Liu"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to SA24204135}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# HW1
+
+I.3.11
+Generate a random sample of size 1000 from a normal location mixture. The components of the mixture have N(0,1) and N(3,1) distributions with mixing probabilities $p1$ and $p2 =1− p1$. Graph the histogram of the sample with density superimposed, for $p1 =0.75$. Repeat with different values for $p1$ and observe whether the empirical distribution of the mixture appears to be bimodal. Make a conjecture about the values of $p1$ that produce bimodal mixtures.
+
+Solution:
+set $p1=0.75,0.5,0.25  and  0.1$,observe the corresponding plots of these four $p1$s.
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+generate_mixture <- function(p1, size = 1000) {
+  n1 <- round(size * p1)
+  n2 <- size - n1
+  
+  comp1 <- rnorm(n1, mean = 0, sd = 1)
+  comp2 <- rnorm(n2, mean = 3, sd = 1)
+  
+  mix <- c(comp1, comp2)
+  
+  df <- data.frame(mix = mix)
+
+  p <- ggplot(df, aes(x = mix)) +
+    geom_histogram(aes(y = ..density..), bins = 30, fill = "lightblue", color = "black", alpha = 0.6) +
+    stat_function(fun = function(x) p1 * dnorm(x, mean = 0, sd = 1) + (1 - p1) * dnorm(x, mean = 3, sd = 1), 
+                  color = "red", linetype = "dashed", size = 1) +
+    ggtitle(paste("Normal Mixture with p1 =", p1, "and p2 =", round(1 - p1, 2))) +
+    xlab("Value") + ylab("Density") +
+    theme_minimal()
+  return(p)
+}
+
+p1_75 <- generate_mixture(0.75)
+p1_50 <- generate_mixture(0.5)
+p1_25 <- generate_mixture(0.25)
+p1_10 <- generate_mixture(0.1)
+
+
+grid.arrange(p1_75, p1_50, p1_25, p1_10, ncol = 2)
+
+```
+
+From the four plots,you can see:
+
+$p1 = 0.75$: The distribution is nearly unimodal;
+$p1 = 0.5$: The distribution is clearly bimodal, with two distinct peaks near 0 and 3;
+$p1 = 0.25$: Bimodal, but the peak near 3 is more pronounced as it dominates the mixture;
+$p1 = 0.1$: The distribution is almost unimodal.
+
+Conclusion:
+Bimodality is most pronounced when $p1$ is close to 0.5; it fades as $p1$ approaches extreme values like 0.1 or 0.9.
+
+
+II.3.20
+A compound\textit{Poisson process is a stochastic process }\{ X( t) , t\geq 0\} that can be represented as the random sum $X( t) = \sum _{i= 1}^{N( t) }Y_{i}$, $t\geq 0$, where $\{N(t),t\geq0\}$ is a Poisson process and $Y_1,Y_2,\ldots$ are iid and independent of $\{N(t),t\geq0\}.$ $\bar{\text{Write a program to simulate a compound Poisson()-Gamma process(Y has}}$ a Gamma distribution). Estimate the mean and the variance of $X(10)$ for several choices of the parameters and compare with the theoretical values.
+
+Hint: Show that $E[X(t)]=\lambda tE[Y_{1}]$ and $Var(X(t))=\lambda tE[Y_{1}^{2}].$
+
+1. $\lambda=3, k=2, \theta=4$
+```{r}
+Poisson_gamma <- function(lambda, k, theta, t, n) {
+  X_t_values <- numeric(n)
+  
+  for (i in 1:n) {
+    # N(t)
+    N_t <- rpois(1, lambda * t)
+    if (N_t > 0) {
+      Y <- rgamma(N_t, shape = k, scale = theta)
+      X_t_values[i] <- sum(Y)
+    } else {
+      X_t_values[i] <- 0
+    }
+  }
+  
+  return(X_t_values)
+}
+
+lambda <- 3   
+k <- 2         
+theta <- 4   
+t <- 10        
+n <- 10000  
+X_t_values <- Poisson_gamma(lambda, k, theta, t, n)
+
+# 模拟
+simulated_mean <- mean(X_t_values)
+simulated_var <- var(X_t_values)
+
+# 理论
+theoretical_mean <- lambda * t * k * theta
+theoretical_var <- lambda * t * (k * theta^2 + (k * theta)^2)
+
+cat("模拟均值: ", simulated_mean, "\n")
+cat("理论均值: ", theoretical_mean, "\n")
+cat("模拟方差: ", simulated_var, "\n")
+cat("理论方差: ", theoretical_var, "\n")
+
+
+```
+
+
+2. $\lambda=3, k=2, \theta=1$
+```{r}
+Poisson_gamma <- function(lambda, k, theta, t, n) {
+  X_t_values <- numeric(n)
+  
+  for (i in 1:n) {
+    # N(t)
+    N_t <- rpois(1, lambda * t)
+    if (N_t > 0) {
+      Y <- rgamma(N_t, shape = k, scale = theta)
+      X_t_values[i] <- sum(Y)
+    } else {
+      X_t_values[i] <- 0
+    }
+  }
+  
+  return(X_t_values)
+}
+
+lambda <- 3   
+k <- 2         
+theta <- 1
+t <- 10        
+n <- 10000  
+X_t_values <- Poisson_gamma(lambda, k, theta, t, n)
+
+# 模拟
+simulated_mean <- mean(X_t_values)
+simulated_var <- var(X_t_values)
+
+# 理论
+theoretical_mean <- lambda * t * k * theta
+theoretical_var <- lambda * t * (k * theta^2 + (k * theta)^2)
+
+cat("模拟均值: ", simulated_mean, "\n")
+cat("理论均值: ", theoretical_mean, "\n")
+cat("模拟方差: ", simulated_var, "\n")
+cat("理论方差: ", theoretical_var, "\n")
+
+
+```
+
+
+3. $\lambda=3, k=4, \theta=4$
+```{r}
+Poisson_gamma <- function(lambda, k, theta, t, n) {
+  X_t_values <- numeric(n)
+  
+  for (i in 1:n) {
+    # N(t)
+    N_t <- rpois(1, lambda * t)
+    if (N_t > 0) {
+      Y <- rgamma(N_t, shape = k, scale = theta)
+      X_t_values[i] <- sum(Y)
+    } else {
+      X_t_values[i] <- 0
+    }
+  }
+  
+  return(X_t_values)
+}
+
+lambda <- 3   
+k <- 4       
+theta <- 4   
+t <- 10        
+n <- 10000  
+X_t_values <- Poisson_gamma(lambda, k, theta, t, n)
+
+# 模拟
+simulated_mean <- mean(X_t_values)
+simulated_var <- var(X_t_values)
+
+# 理论
+theoretical_mean <- lambda * t * k * theta
+theoretical_var <- lambda * t * (k * theta^2 + (k * theta)^2)
+
+cat("模拟均值: ", simulated_mean, "\n")
+cat("理论均值: ", theoretical_mean, "\n")
+cat("模拟方差: ", simulated_var, "\n")
+cat("理论方差: ", theoretical_var, "\n")
+
+
+```
+
+4. $\lambda=1, k=2, \theta=4$
+```{r}
+Poisson_gamma <- function(lambda, k, theta, t, n) {
+  X_t_values <- numeric(n)
+  
+  for (i in 1:n) {
+    # N(t)
+    N_t <- rpois(1, lambda * t)
+    if (N_t > 0) {
+      Y <- rgamma(N_t, shape = k, scale = theta)
+      X_t_values[i] <- sum(Y)
+    } else {
+      X_t_values[i] <- 0
+    }
+  }
+  
+  return(X_t_values)
+}
+
+lambda <- 1 
+k <- 2         
+theta <- 4   
+t <- 10        
+n <- 10000  
+X_t_values <- Poisson_gamma(lambda, k, theta, t, n)
+
+# 模拟
+simulated_mean <- mean(X_t_values)
+simulated_var <- var(X_t_values)
+
+# 理论
+theoretical_mean <- lambda * t * k * theta
+theoretical_var <- lambda * t * (k * theta^2 + (k * theta)^2)
+
+cat("模拟均值: ", simulated_mean, "\n")
+cat("理论均值: ", theoretical_mean, "\n")
+cat("模拟方差: ", simulated_var, "\n")
+cat("理论方差: ", theoretical_var, "\n")
+
+
+```
+Conclusion: The estimates are close to the theoretical values
+
+# HW2
+
+I.5.4   Write a function to compute a Monte Carlo estimate of the Beta(3, 3) cdf,and use the function to estimate F(x) for x =0.1,0.2,...,0.9. Compare the estimates with the values returned by the pbeta function in R.
+```{r}
+beta_cdf <- function(x, n = 10000) {
+  samples <- rbeta(n, 3, 3)
+  mean(samples <= x)
+}
+
+x_values <- seq(0.1, 0.9, by = 0.1)
+estimated_cdf <- sapply(x_values, beta_cdf)
+
+actual_cdf <- pbeta(x_values, 3, 3)
+
+comparison <- data.frame(x = x_values, Estimated = estimated_cdf, Actual = actual_cdf)
+print(comparison)
+
+
+```
+After comparison, the actual value is close to the estimate.
+
+
+II.5.9   The Rayleigh density [156, (18.76)] is：
+
+$$
+f(x)=\frac{x}{\sigma^2} e^{-x^2/(2\sigma^2)},\quad x\ge0, \sigma>0.
+$$
+
+Implement a function to generate samples from a Rayleigh(σ) distribution,using antithetic variables. What is the percent reduction in variance of \(\frac{X + X'}{2}\) compared with \(\frac{X_1 + X_2}{2}\) for independent \(X_1, X_2\)?
+```{r}
+sigma <- 1
+
+rayleigh_antithetic <- function(sigma, n_samples) {
+  U <- runif(n_samples)
+  X <- sigma * sqrt(-2 * log(U))
+  U_prime <- 1 - U
+  X_prime <- sigma * sqrt(-2 * log(U_prime))
+  return(list(X = X, X_prime = X_prime))
+}
+
+n_samples <- 10000
+samples <- rayleigh_antithetic(sigma, n_samples)
+
+X_mean_antithetic <- (samples$X + samples$X_prime) / 2
+X1 <- sigma * sqrt(-2 * log(runif(n_samples)))
+X2 <- sigma * sqrt(-2 * log(runif(n_samples)))
+X_mean_independent <- (X1 + X2) / 2
+
+var_antithetic <- var(X_mean_antithetic)
+var_independent <- var(X_mean_independent)
+variance_reduction_percent <- (1 - var_antithetic / var_independent) * 100
+
+cat("使用对偶变量的方差:", var_antithetic, "\n")
+cat("使用独立样本的方差:", var_independent, "\n")
+cat("方差减少百分比:", variance_reduction_percent, "%\n")
+
+
+```
+After comparison,the percent reduction in variance of \(\frac{X + X'}{2}\) compared with \(\frac{X_1 + X_2}{2}\) for independent \(X_1, X_2\) is 94.3978%, the Monte Carlo method using dual variables significantly reduce variance relative to standard independent sampling methods
+
+
+III. 5.13 Find two importance functions $f_1$ and $f_2$ that are supported on $(1,\infty)$ and are‘close’to
+
+$$
+g(x)=\dfrac{x^2}{\sqrt{2\pi}}\:e^{-x^2/2},\quad x>1.
+$$
+
+Which of your two importance functions should produce the smaller variance in estimating
+$$
+\begin{aligned}\int_1^\infty\frac{x^2}{\sqrt{2\pi}}\:e^{-x^2/2}\:dx\end{aligned}
+$$
+by importance sampling? Explain.
+
+
+Define two importance functions $f_1:Gamma distribution$ and $f_2:Truncated Normal distribution$
+```{r}
+library(truncnorm)
+set.seed(12345)
+g <- function(x) {
+  (x^2 / sqrt(2 * pi)) * exp(-x^2 / 2)
+}
+
+n <- 10000
+# f1: Gamma 分布
+shape <- 3  
+scale <- 1  
+samples_f1 <- rgamma(n, shape = shape, scale = scale)
+weights_f1 <- g(samples_f1) / dgamma(samples_f1, shape = shape, scale = scale)
+
+integral_estimate_f1 <- mean(weights_f1)
+cat("Gamma 分布下的积分估计值:", integral_estimate_f1, "\n")
+var_f1 <- var(weights_f1)
+cat("Gamma 分布下的方差:", var_f1, "\n")
+
+# f2: 截断正态分布
+mu <- 3      
+sigma <- 1   
+a <- 1       
+
+samples_f2 <- rtruncnorm(n, a = a, mean = mu, sd = sigma)
+weights_f2 <- g(samples_f2) / dtruncnorm(samples_f2, a = a, mean = mu, sd = sigma)
+
+integral_estimate_f2 <- mean(weights_f2)
+cat("截断正态分布下的积分估计值:", integral_estimate_f2, "\n")
+var_f2 <- var(weights_f2)
+cat("截断正态分布下的方差:", var_f2, "\n")
+```
+After calculation and analysis, $f_1$ and g(x) are more similar in shape, so the variance is smaller than that of $f_2$ by importance sampling.
+
+IV.Monte Carlo experiment
+
+For n = 104,2×104,4×104,6×104,8×104, apply the fast sorting algorithm to randomly permuted numbers of 1,...,n.
+
+Calculate computation time averaged over 100 simulations, denoted by $a_n$.
+
+Regress $a_n$ on $t_n$ := nlog(n), and graphically show the results (scatter plot and regression line).
+```{r}
+set.seed(12345)
+n_values <- c(10^4, 2 * 10^4, 4 * 10^4, 6 * 10^4, 8 * 10^4)
+mean_times <- numeric(length(n_values))
+
+for (i in seq_along(n_values)) {
+  n <- n_values[i]
+  times <- numeric(100) 
+  
+  for (j in 1:100) {
+   
+    random_permutation <- sample(1:n)
+    
+    start_time <- proc.time() 
+    sorted <- sort(random_permutation)
+    end_time <- proc.time()   
+    
+    times[j] <- (end_time - start_time)[3] 
+  }
+  
+  mean_times[i] <- mean(times)
+}
+
+
+t_n <- n_values * log(n_values)
+regression_model <- lm(mean_times ~ t_n)
+summary(regression_model)
+
+plot(t_n, mean_times, main = "Average Sorting Time vs n log(n)",
+     xlab = "n log(n)", ylab = "Average Sorting Time (seconds)",
+     pch = 19, col = "blue")
+abline(regression_model, col = "red", lwd = 2)  
+
+```
+Conclusion: The effect of$t_n$ on the average sorting time $a_n$ is close to significant (p = 0.04606).
+
+# HW3
+
+II.
+6.B Tests for association based on Pearson product moment correlation $\rho$,Spear-man's rank correlation coefficient $\rho_{s}$, or Kendall's coefficient $\tau$, are implemented in cor.test. Show (empirically) that the nonparametric tests based on $\rho_{s}$ or $\tau$ are less powerful than the correlation test when the sampled distribution is bivariate normal. Find an example of an alternative (a bivariate distribution $(X,Y)$ such that $X$ and $Y$ are dependent) such that at least one of the nonparametric tests have better empirical power than the correlation test against this alternative.
+
+
+1.The  bivariate normal distribution
+```{r}
+set.seed(123)
+
+
+n <- 100  
+N <- 10000
+alpha <- 0.05  
+
+power_pearson <- 0
+power_spearman <- 0
+power_kendall <- 0
+
+for (i in 1:N) {
+  X <- rnorm(n)
+  Y <- 0.5 * X + sqrt(1 - 0.5^2) * rnorm(n)  # 相关系数为0.5
+  
+  # 皮尔逊检验
+  test_pearson <- cor.test(X, Y, method = "pearson")
+  if (test_pearson$p.value < alpha) {
+    power_pearson <- power_pearson + 1
+  }
+  
+  # 斯皮尔曼检验
+  test_spearman <- cor.test(X, Y, method = "spearman")
+  if (test_spearman$p.value < alpha) {
+    power_spearman <- power_spearman + 1
+  }
+  
+  # 肯德尔检验
+  test_kendall <- cor.test(X, Y, method = "kendall")
+  if (test_kendall$p.value < alpha) {
+    power_kendall <- power_kendall + 1
+  }
+}
+
+power_pearson <- power_pearson / N
+power_spearman <- power_spearman / N
+power_kendall <- power_kendall / N
+
+cat("双变量正态分布下的统计功效:\n")
+cat("Pearson: ", power_pearson, "\n")
+cat("Spearman: ", power_spearman, "\n")
+cat("Kendall: ", power_kendall, "\n")
+```
+In the case of bivariate normal distribution, the results show that the Pearson test has the highest power.
+
+2.A non-normol distribution $(X,Y)$ such that $X$ and $Y$ are dependent
+```{r}
+set.seed(123)
+
+
+n <- 100
+N <- 1000  
+alpha <- 0.05  
+
+power_pearson_nonlinear <- 0
+power_spearman_nonlinear <- 0
+power_kendall_nonlinear <- 0
+
+for (i in 1:N) {
+  X <- rnorm(n)
+  Y <- sin(X) + rnorm(n, sd = 2)  
+  
+  # 皮尔逊检验
+  test_pearson <- cor.test(X, Y, method = "pearson")
+  if (test_pearson$p.value < alpha) {
+    power_pearson_nonlinear <- power_pearson_nonlinear + 1
+  }
+  
+  # 斯皮尔曼检验
+  test_spearman <- cor.test(X, Y, method = "spearman")
+  if (test_spearman$p.value < alpha) {
+    power_spearman_nonlinear <- power_spearman_nonlinear + 1
+  }
+  
+  # 肯德尔检验
+  test_kendall <- cor.test(X, Y, method = "kendall")
+  if (test_kendall$p.value < alpha) {
+    power_kendall_nonlinear <- power_kendall_nonlinear + 1
+  }
+}
+
+power_pearson_nonlinear <- power_pearson_nonlinear / N
+power_spearman_nonlinear <- power_spearman_nonlinear / N
+power_kendall_nonlinear <- power_kendall_nonlinear / N
+
+cat("\n非正态分布下的统计功效 (n = 1000, Y = sin(X) + noise):\n")
+cat("Pearson: ", power_pearson_nonlinear, "\n")
+cat("Spearman: ", power_spearman_nonlinear, "\n")
+cat("Kendall: ", power_kendall_nonlinear, "\n")
+
+```
+In non-normal situations, as noise increases, non-parametric tests (Spearman and Kendall) typically outperform the Pearson test.
+
+# HW4
+
+I.
+Of $N=1000$ hypotheses, 950 are null and 50 are alternative.The p-value under any null hypothesis is uniformly distributed (use runif), and the p-value under any alternative hypothesis follows the beta distribution with parameter 0.1 and 1(use rbeta). Obtain Bonferroni adjusted p-values and B-H adjusted p-values. Calculate FWER, FDR, and TPR under nominal level $\alpha=0.1$ for each of the two adjustment methods based on $m=10000$ simulation replicates. You should output the 6 numbers (3) to a $3\times2$ table (column names: Bonferroni correction, B-H correction; row names: FWER, FDR, TPR). Comment the results.
+
+Solution:
+
+```{r}
+N <- 1000
+null_count <- 950
+alt_count <- 50
+alpha <- 0.1
+m <- 10000
+set.seed(100)
+
+bonferroni_results <- matrix(0, nrow = m, ncol = 3)
+BH_results <- matrix(0, nrow = m, ncol = 3)
+
+for (i in 1:m) {
+  p_values_null <- runif(null_count)  
+  p_values_alt <- rbeta(alt_count, 0.1, 1)  
+  p_values <- c(p_values_null, p_values_alt) 
+
+  true_labels <- c(rep(0, null_count), rep(1, alt_count))
+  
+  pval_bonferroni <- p.adjust(p_values, method = "bonferroni")
+  reject_bonferroni <- pval_bonferroni < alpha
+  
+  pval_BH <- p.adjust(p_values, method = "BH")
+  reject_BH <- pval_BH < alpha
+  
+  FWER_bonferroni <- ifelse(sum(reject_bonferroni & true_labels == 0) > 0, 1, 0)
+  FDR_bonferroni <- sum(reject_bonferroni & true_labels == 0) / max(sum(reject_bonferroni), 1)
+  TPR_bonferroni <- sum(reject_bonferroni & true_labels == 1) / alt_count
+  
+  bonferroni_results[i, ] <- c(FWER_bonferroni, FDR_bonferroni, TPR_bonferroni)
+  
+  FWER_BH <- ifelse(sum(reject_BH & true_labels == 0) > 0, 1, 0)
+  FDR_BH <- sum(reject_BH & true_labels == 0) / max(sum(reject_BH), 1)
+  TPR_BH <- sum(reject_BH & true_labels == 1) / alt_count
+  
+  BH_results[i, ] <- c(FWER_BH, FDR_BH, TPR_BH)
+}
+
+bonferroni_means <- colMeans(bonferroni_results)
+BH_means <- colMeans(BH_results)
+
+results_df <- data.frame(
+  Metric = c("FWER", "FDR", "TPR"),
+  Bonferroni = bonferroni_means,
+  BH = BH_means
+)
+
+results_df
+```
+Conclusions:
+
+Bonferroni Adjustment:
+
+FWER: Low, close to 0.1, meaning it strictly controls the family-wise error rate.
+
+FDR: Very low, close to 0, but its strictness may result in fewer rejected hypotheses.
+
+TPR: Low, indicating it has poor ability to detect true alternative hypotheses, making it prone to missing true effects.
+
+B-H Adjustment:
+
+FWER: High, indicating it is not as strict as Bonferroni in controlling the family-wise error rate.
+
+FDR: Close to 0.1, meaning it effectively controls the false discovery rate.
+
+TPR: Higher than Bonferroni Adjustment, indicating it performs better in detecting true effects,allowing more alternative hypotheses to be rejected.
+
+
+IV.
+Suppose the population has the exponential distribution with rate $\lambda$, then the MLE of $\lambda$ is $\hat{\lambda}=1/\bar{X}$, where $\bar{X}$ is the sample mean. It can be derived that the expectation of $\hat{\lambda}$ is $\lambda n/(n-1)$, so that the estimation bias is $\lambda/(n-1).$ The standard error $\hat{\lambda}$ is $\lambda n/[(n-1)\sqrt{n-2}].$ Conduct a simulation study to verify the performance of the bootstrap method.
+
+Compare the mean bootstrap bias and bootstrap standard error with the theoretical ones. Comment on the results.
+```{r}
+library(boot)
+lambda_true <- 2 
+n_vals <- c(5, 10, 20)  
+B <- 1000  # Bootstrap 重采样次数
+m <- 1000  # 模拟次数
+set.seed(100)
+
+mle_lambda <- function(data, indices) {
+  resampled_data <- data[indices]
+  return(1 / mean(resampled_data))
+}
+
+results <- data.frame(n = rep(n_vals, each = 2), 
+                      Type = rep(c("Bias", "Std.Error"), times = length(n_vals)),
+                      Theoretical = rep(NA, length(n_vals) * 2),
+                      Bootstrap = rep(NA, length(n_vals) * 2))
+
+for (n in n_vals) {
+  
+
+  theoretical_bias <- lambda_true / (n - 1)
+  theoretical_se <- lambda_true * n / ((n - 1) * sqrt(n - 2))
+  
+  bootstrap_biases <- numeric(m)
+  bootstrap_ses <- numeric(m)
+  
+  for (i in 1:m) {
+    sample_data <- rexp(n, rate = lambda_true)
+    lambda_hat <- 1 / mean(sample_data)
+    boot_out <- boot(sample_data, mle_lambda, R = B)
+    
+    bootstrap_biases[i] <- mean(boot_out$t) - lambda_hat
+    bootstrap_ses[i] <- sd(boot_out$t)
+  }
+  
+
+  bootstrap_mean_bias <- mean(bootstrap_biases)
+  bootstrap_mean_se <- mean(bootstrap_ses)
+  
+  results[results$n == n & results$Type == "Bias", "Theoretical"] <- theoretical_bias
+  results[results$n == n & results$Type == "Std.Error", "Theoretical"] <- theoretical_se
+  results[results$n == n & results$Type == "Bias", "Bootstrap"] <- bootstrap_mean_bias
+  results[results$n == n & results$Type == "Std.Error", "Bootstrap"] <- bootstrap_mean_se
+}
+
+print(results)
+
+```
+Conclusion:
+When n = 5: The bias and standard error from the Bootstrap method are larger than the theoretical values, reflecting the instability of estimates with small samples.
+
+When n = 10 and n = 20: The difference between the Bootstrap method and the theoretical values decreases, especially at n = 20, where they are almost identical, indicating more accurate estimates with larger samples.
+
+So the Bootstrap method tends to overestimate bias and standard error in small samples.When the sample size is sufficiently large, the Bootstrap method is stable and reliable.
+
+
+# HW5
+
+I. 7.8  Refer to Exercise 7.7. Obtain the jackknife estimates of bias and standard error of $\hat{\theta}.$*
+
+Solution:
+```{r}
+library(bootstrap)
+data1<-as.matrix(scor)
+
+hat_theta <- function(data) {
+  sigma_hat <- cov(data)
+  eigenvalues <- eigen(sigma_hat)$values
+  theta_hat <- eigenvalues[1] / sum(eigenvalues)
+  return(theta_hat)
+}
+
+theta_hat <- hat_theta(data1)
+
+n <- nrow(data1)
+jackknife_values <- numeric(n)
+
+for (i in 1:n) {
+  jackknife_data <- data1[-i, ]
+  jackknife_values[i] <- hat_theta(jackknife_data)
+}
+
+jackknife_bias <- (n - 1) * (mean(jackknife_values) - theta_hat)
+jackknife_se <- sqrt((n - 1) * mean((jackknife_values - mean(jackknife_values))^2))
+
+
+cat("The bias of Jackknife estimates:", jackknife_bias, "\n")
+cat("The standard error of Jackknife:", jackknife_se)
+```
+
+Conclusion:
+This result indicates that, for this dataset, the jackknife estimates of bias is very small, and the standard error  of $\hat{\theta} is approximately 0.04956. This outcome suggests that the proportion of variance explained by the first principal component is relatively stable when conducting principal component analysis.
+
+
+III.
+8.1 Implement the two-sample Cramér-von Mises test for equal distributions as a permutation test. Apply the test to the data in Examples 8.1 and 8.2.
+
+Solution：
+```{r}
+attach(chickwts)
+x <- sort(as.vector(weight[feed == "soybean"]))
+y <- sort(as.vector(weight[feed == "linseed"]))
+detach(chickwts)
+
+Mises_statistic <- function(x, y) {
+  n <- length(x)
+  m <- length(y)
+  combined <- sort(c(x, y))
+  Fx <- ecdf(x)
+  Fy <- ecdf(y)
+  
+  # Cramér-von Mises 统计量
+  W2 <- sum((Fx(combined) - Fy(combined))^2) * (n * m / (n + m)^2)
+  return(W2)
+}
+
+observed_stat <- Mises_statistic(x, y)
+
+
+R <- 999   #number of replicates
+z <- c(x, y)   #pooled sample
+K <- 1:length(z)  
+D <- numeric(R)   #storage for replicates
+
+ 
+set.seed(100) 
+for (i in 1:R) {
+   # generate indices k for the first sample
+  k <- sample(K, size = length(x), replace = FALSE) 
+  x1 <- z[k]     
+  y1 <- z[-k]    #complement of x1    
+  D[i] <-  Mises_statistic(x1, y1)  
+}
+
+
+p <- mean(c(observed_stat, D) >= observed_stat)
+cat("Observed Cramér-von Mises statistic:", observed_stat, "\n")
+cat("Permutation test p-value:", p, "\n")
+
+hist(D, main = "", freq = FALSE, xlab = paste("W2 (p =", round(p, 2), ")"), breaks = "Scott")
+points(observed_stat, 0, cex = 1, pch = 16)  
+
+```
+
+Conclusion：The observed Cramér-von Mises statistic is 0.1515216, this indicates that the distribution between the two groups is not very different.
+
+The test p-value is  0.414, much greater than 0.05 and 0.01, so we can't reject the null hypothesis, so it cannot be considered that there is a significant difference in the distribution of data between the two groups of soybean and linseed.
+
+# HW6
+
+I.9.3 Use the Metropolis-Hastings sampler to generate random variables from a standard Cauchy distribution. Discard the first 1000 of the chain, and compare the deciles of the generated observations with the deciles of the standard Cauchy distribution (see qcauchy or qt with df=1). Recall that a Cauchy$(\theta,\eta)$ distribution has density function
+
+$$f(x)=\frac{1}{\theta\pi(1+[(x-\eta)/\theta]^2)},\quad-\infty<x<\infty,\:\theta>0.$$
+
+The standard Cauchy has the Cauchy$(\theta=1,\eta=0)$ density. (Note that the standard Cauchy density is equal to the Student t density with one degree of freedom. )
+
+Solution：
+```{r}
+set.seed(100)
+
+metropolis_hastings <- function(n, initial, proposal_sd) {
+  samples <- numeric(n)
+  samples[1] <- initial
+  
+  for (t in 2:n) {
+    x_prime <- rnorm(1, mean = samples[t - 1], sd = proposal_sd)
+    
+    f_x <- 1 / (pi * (1 + samples[t - 1]^2))
+    f_x_prime <- 1 / (pi * (1 + x_prime^2))
+    
+    alpha <- f_x_prime / f_x
+    
+    if (runif(1) < alpha) {
+      samples[t] <- x_prime
+    } else {
+      samples[t] <- samples[t - 1]
+    }
+  }
+  
+  return(samples)
+}
+
+n_samples <- 10000
+initial_value <- 0
+proposal_sd <- 1
+
+samples <- metropolis_hastings(n_samples, initial_value, proposal_sd)
+
+# 丢弃前1000个样本
+burned_samples <- samples[-(1:1000)]
+
+generated_deciles <- quantile(burned_samples, probs = seq(0.1, 0.9, by = 0.1))
+
+theoretical_deciles <- qcauchy(seq(0.1, 0.9, by = 0.1))
+
+comparison <- data.frame(
+  Decile = seq(0.1, 0.9, by = 0.1),
+  Generated = generated_deciles,
+  Theoretical = theoretical_deciles
+)
+
+print(comparison)
+
+```
+Conclusion：The overall trend is consistent: from the 10% to the 90%, the generated samples closely follow the theoretical Cauchy distribution. Deviations are more pronounced at the extreme 10% and 90% , while smaller at the middle percentiles (50% and 60%).
+
+
+III.
+For the above exercise, use the Gelman-Rubin method to monitor convergence of the chain, and run the chain until it converges approximately to the target distribution according to $\hat{R}<1.2.$
+
+For I.：
+
+Solution：
+```{r}
+set.seed(100)
+
+metropolis_hastings <- function(n, initial, proposal_sd) {
+  samples <- numeric(n)
+  samples[1] <- initial
+  
+  for (t in 2:n) {
+    x_prime <- rnorm(1, mean = samples[t - 1], sd = proposal_sd)
+    
+    f_x <- 1 / (pi * (1 + samples[t - 1]^2))
+    f_x_prime <- 1 / (pi * (1 + x_prime^2))
+    
+    alpha <- f_x_prime / f_x
+    
+    if (runif(1) < alpha) {
+      samples[t] <- x_prime
+    } else {
+      samples[t] <- samples[t - 1]
+    }
+  }
+  return(samples)
+}
+
+n_samples <- 10000
+n_chains <- 4
+proposal_sd <- 1
+burn_in <- 1000
+convergence_threshold <- 1.2
+
+chains <- list()
+initial_values <- seq(-3, 3, length.out = n_chains)
+
+for (i in 1:n_chains) {
+  chains[[i]] <- metropolis_hastings(n_samples, initial_values[i], proposal_sd)
+}
+
+Rhat <- function(chains) {
+
+  chain_means <- sapply(chains, mean)[1:n_chains]
+  chain_var <- sapply(chains, var)
+  
+  total_mean <- mean(chain_means)
+  B <- n_samples * sum((chain_means - total_mean)^2) / (n_chains - 1) # Between-chain var
+  W <- mean(chain_var) # Within-chain var
+  
+  # Gelman-Rubin 统计量
+  Rhat <- sqrt((W * (n_samples - 1) / n_samples) + B / n_samples) / W
+  return(Rhat)
+}
+
+while (TRUE) {
+  current_Rhat <- Rhat(chains)
+  cat("Current Rhat:", current_Rhat, "\n")
+  
+  if (current_Rhat < convergence_threshold) {
+    cat("Chains have converged.\n")
+    break
+  }
+  
+  for (i in 1:n_chains) {
+    new_samples <- metropolis_hastings(n_samples, initial_values[i], proposal_sd)
+    chains[[i]] <- c(chains[[i]], new_samples)
+  }
+}
+
+
+burned_samples <- lapply(chains, function(chain) chain[-(1:burn_in)])
+
+
+```
+
+# HW7
+
+II. 11.5 Write a function to solve the equation
+$$
+\begin{aligned}
+\frac{2 \Gamma\left(\frac{k}{2}\right)}{\sqrt{\pi(k-1)} \Gamma\left(\frac{k-1}{2}\right)} & \int_0^{c_{k-1}}\left(1+\frac{u^2}{k-1}\right)^{-k / 2} d u \\
+= & \frac{2 \Gamma\left(\frac{k+1}{2}\right)}{\sqrt{\pi k} \Gamma\left(\frac{k}{2}\right)} \int_0^{c_k}\left(1+\frac{u^2}{k}\right)^{-(k+1) / 2} d u
+\end{aligned}
+$$
+for $a$, where
+$$
+c_k=\sqrt{\frac{a^2 k}{k+1-a^2}} .
+$$
+Compare the solutions with the points $A(k)$ in Exercise 11.4.
+
+Solution：
+```{r}
+library(pracma)
+
+f2 <- function(a, k) {
+  return(sqrt(a^2 * k / (k + 1 - a^2)))
+}
+
+lhs_expr <- function(a, k) {
+  f2_minus_1 <- f2(a, k - 1)
+  
+  integrand <- function(u) {
+    return((1 + u^2 / (k - 1))^(-k / 2))
+  }
+  
+  integral_val <- integrate(integrand, 0, f2_minus_1)$value
+  
+  result <- (2 * gamma(k / 2)) / (sqrt(pi * (k - 1)) * gamma((k - 1) / 2)) * integral_val
+  return(result)
+}
+
+rhs_expr <- function(a, k) {
+  c_k_val <- f2(a, k)
+  
+  integrand <- function(u) {
+    return((1 + u^2 / k)^(-(k + 1) / 2))
+  }
+  
+  integral_val <- integrate(integrand, 0, c_k_val)$value
+  
+  result <- (2 * gamma((k + 1) / 2)) / (sqrt(pi * k) * gamma(k / 2)) * integral_val
+  return(result)
+}
+
+equation_diff <- function(a, k) {
+  lhs <- lhs_expr(a, k)
+  rhs <- rhs_expr(a, k)
+  
+  return(lhs - rhs)
+}
+
+solve_equation <- function(k) {
+  result <- tryCatch({
+    uniroot(equation_diff, lower = 1, upper = sqrt(k) - 1e-6, k = k)
+  }, error = function(e) {
+    return(NULL)  
+  })
+  
+  if (is.null(result)) {
+    return(NA) 
+  }
+  
+  return(result$root)
+}
+
+
+K <- c(4:25, 100, 500, 1000)
+n <- length(K)
+solution_a <- rep(0, n)
+
+for (i in 1:n) {
+  k <- K[i]
+  solution_a[i] <- solve_equation(k)
+}
+
+result <- data.frame(K = K, r2 = solution_a)
+print(result)
+
+
+```
+Conclusion:The two methods in 11.4 and 11.5 yield very close results when calculating \( A(k) \), indicating that the two methods are essentially consistent. It is observed that as \( k \) increases, the order of the difference does not change significantly, which suggests that both methods are effective for calculating \( A(k) \).
+
+
+
+```{r}
+attach(chickwts)
+x <- sort(as.vector(weight[feed == "soybean"]))
+y <- sort(as.vector(weight[feed == "linseed"]))
+detach(chickwts)
+
+Mises_statistic <- function(x, y) {
+  n <- length(x)
+  m <- length(y)
+  combined <- sort(c(x, y))
+  Fx <- ecdf(x)
+  Fy <- ecdf(y)
+  
+  # Cramér-von Mises 统计量
+  W2 <- sum((Fx(combined) - Fy(combined))^2) * (n * m / (n + m)^2)
+  return(W2)
+}
+
+observed_stat <- Mises_statistic(x, y)
+
+
+R <- 999   #number of replicates
+z <- c(x, y)   #pooled sample
+K <- 1:length(z)  
+D <- numeric(R)   #storage for replicates
+
+ 
+set.seed(100) 
+for (i in 1:R) {
+   # generate indices k for the first sample
+  k <- sample(K, size = length(x), replace = FALSE) 
+  x1 <- z[k]     
+  y1 <- z[-k]    #complement of x1    
+  D[i] <-  Mises_statistic(x1, y1)  
+}
+
+
+p <- mean(c(observed_stat, D) >= observed_stat)
+cat("Observed Cramér-von Mises statistic:", observed_stat, "\n")
+cat("Permutation test p-value:", p, "\n")
+
+hist(D, main = "", freq = FALSE, xlab = paste("W2 (p =", round(p, 2), ")"), breaks = "Scott")
+points(observed_stat, 0, cex = 1, pch = 16)  
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

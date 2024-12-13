@@ -1,0 +1,18 @@
+Package: SA24204135
+Type: Package
+Title: Example functions for 'Statistical Computing' course
+Version: 1.0
+Date: 2024-12-11
+Author: Muxin Liu
+Maintainer: Muxin Liu <lmxsytlp@mail.ustc.edu.cn>
+Description: Several R and Rcpp function are included in this package for illustration. 
+License: GPL (>= 2)
+Imports: Rcpp, microbenchmark,MatchIt,stats
+Suggests: knitr, rmarkdown,ggplot2,gridExtra,truncnorm,boot,bootstrap,pracma,RcppArmadillo
+LinkingTo: Rcpp
+RoxygenNote: 7.3.2
+Encoding: UTF-8
+VignetteBuilder: knitr
+URL: http://github.com/800-lmx/SA24204135
+BugReports: http://github.com/800-lmx/SA24204135/issues
+
